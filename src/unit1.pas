@@ -135,6 +135,8 @@ var
   url:string;
   s:string;
   ss:TStringStream;
+  strUTF8: AnsiString;
+  strUTF16: WideString;
 begin
   url:=Edit1.Text;
   if(lowercase(copy(url,1,length('http://')))<> 'http://')then
@@ -147,18 +149,33 @@ begin
   IdHTTP1.Request.Connection := 'Keep-Alive';
   IdHTTP1.HTTPOptions:=IdHTTP1.HTTPOptions+[hoKeepOrigProtocol];
   IdHTTP1.ProtocolVersion:=pv1_1;
-  IdHTTP1.Response.CharSet := 'UTF-8';
+  //IdHTTP1.Response.CharSet := 'gbk';
    try
      { 指定gb2312的中文代码页，或者54936（gb18030）更好些 utf8 对应 65001}
      ss := TStringStream.Create('');
      IdHTTP1.IOHandler := IdSSLIOHandlerSocketOpenSSL1;
      IdHTTP1.Get(url,ss);
      s:=ss.DataString;
+     if(IdHTTP1.Response.MetaHTTPEquiv.CharSet = 'gbk') or (IdHTTP1.Response.CharSet = 'gbk')then
+     begin
+       SetLength(strUTF16, Length(s));
+       SetLength(strUTF16,MultiByteToWideChar(936,0,PAnsiChar(s), Length(s),PWideChar(strUTF16),Length(strUTF16)));
+       strUTF8 := UTF8Encode(strUTF16);
+       {$IFDEF UNICODE}
+         Memo1.Lines.Text := strUTF8;
+       {$ELSE}
+         Memo1.Lines.Text := strUTF8;
+       {$ENDIF}
+     end
+     else if(IdHTTP1.Response.CharSet = 'UTF-8')then
+     begin
      {$IFDEF UNICODE}
        Memo1.Lines.Text := s;
      {$ELSE}
        Memo1.Lines.Text := s;
      {$ENDIF}
+     end;
+
    except
      showmessage('连接失败！');
      exit;
